@@ -1,0 +1,28 @@
+services:
+  cpp-academy:
+    build:
+      context: ./app
+    image: cpp-academy:latest
+    container_name: cpp-academy
+    ports:
+      - "8088:8088"
+    environment:
+      # Hard limits for the in-browser compiler/runner (seconds, bytes).
+      COMPILE_TIMEOUT: "12"
+      RUN_TIMEOUT: "6"
+      MAX_CODE_BYTES: "200000"
+    # Defence-in-depth for the untrusted code that learners compile & run.
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8088/api/health',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

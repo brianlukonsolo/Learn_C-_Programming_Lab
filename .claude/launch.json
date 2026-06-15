@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cpp-academy",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "course/docker-compose.yml", "up"],
+      "port": 8088
+    }
+  ]
+}

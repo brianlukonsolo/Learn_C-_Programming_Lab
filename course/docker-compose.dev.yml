@@ -1,0 +1,13 @@
+# Development override (feature #13).
+#
+# Bind-mounts the frontend so edits to HTML/CSS/JS show on a browser refresh
+# WITHOUT rebuilding the image. The server reads static files fresh per request.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# (The production image remains fully self-contained — this override is opt-in.)
+services:
+  cpp-academy:
+    volumes:
+      - ./app/static:/app/static:ro
+      - ./app/server.py:/app/server.py:ro
