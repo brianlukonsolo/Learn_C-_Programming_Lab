@@ -40,7 +40,7 @@ MAX_CONCURRENCY = int(os.environ.get("MAX_CONCURRENCY", "4"))
 # Allowed C++ standards (feature #7). Maps request value -> g++ flag.
 STD_ALLOW = {
     "c++11": "c++11", "c++14": "c++14", "c++17": "c++17",
-    "c++20": "c++20", "c++23": "c++2b",
+    "c++20": "c++20", "c++23": "c++23",
 }
 DEFAULT_STD = "c++17"
 

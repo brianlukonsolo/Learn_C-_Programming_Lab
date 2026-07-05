@@ -35,7 +35,7 @@ docker compose down
 | **13 modules incl. a capstone** | Mirrors the cplusplus.com C++ Language Tutorial (basics → OOP → templates → file I/O), then a 3-step **Capstone Project** building a CLI to-do app. |
 | **Live compiler** | `POST /api/run` compiles and runs your code with `g++` and returns the output. |
 | **Auto-graded exercises** | `POST /api/grade` compiles once and runs your code against hidden test cases, showing per-test pass/fail with expected-vs-actual diffs. |
-| **Compiler settings** | Choose the **C++ standard** (C++11 → C++23) and toggle **AddressSanitizer** (catches memory bugs / UB at runtime). Persisted. |
+| **Compiler settings** | Choose the **C++ standard** (C++11 → C++23) and toggle runtime sanitizers (AddressSanitizer + UBSan for many memory bugs / UB mistakes). Persisted. |
 | **6 themes (WCAG AA)** | Synthwave (default), Midnight, Nord, Dracula, Solarized Light, Paper — every text/background pair is contrast-checked. |
 | **Diagrams** | Animated SVGs for pointers, stack-vs-heap memory, inheritance, and dynamic dispatch. |
 | **Tooltips** | Underlined terms reveal deeper explanations on hover or keyboard focus (with full text exposed to screen readers). |

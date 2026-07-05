@@ -2,7 +2,7 @@
 
 # 🚀 C++ Academy — Learn C++ in a Day ⚙️
 
-### *An interactive, luxuriously-themed C++ course with a live in-browser compiler — all running in Docker* 🐳
+### *An interactive, professionally-themed C++ course with a live in-browser compiler — all running in Docker* 🐳
 
 ![C++](https://img.shields.io/badge/C%2B%2B-11_→_23-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![Docker](https://img.shields.io/badge/Runs_in-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
@@ -48,11 +48,11 @@ docker compose down
 
 | | Feature | What you get |
 |---|---|---|
-| 📚 | **13 modules + capstone** | Basics → control flow → OOP → templates → file I/O, then a 3-step **build-a-to-do-app** capstone. |
+| 📚 | **13 modules incl. capstone** | Basics → control flow → OOP → templates → file I/O, with a 3-step **build-a-to-do-app** capstone. |
 | ⚡ | **Live compiler** | Edit code and hit ▶ **Run** — compiled by real `g++` and executed in a sandbox. |
 | 🧪 | **Auto-graded exercises** | Your code is run against hidden test cases with pass/fail + expected-vs-actual diffs. |
-| 🛠️ | **Compiler settings** | Pick the **C++ standard** (11 → 23) and toggle **AddressSanitizer** to catch memory bugs. |
-| 🎨 | **6 luxury themes** | Each one contrast-checked for **WCAG AA** legibility. |
+| 🛠️ | **Compiler settings** | Pick the **C++ standard** (11 → 23) and toggle runtime sanitizers to catch many memory bugs and UB mistakes. |
+| 🎨 | **6 polished themes** | Each one contrast-checked for **WCAG AA** legibility. |
 | 🖼️ | **Animated diagrams** | Pointers, stack vs heap, inheritance, and dynamic dispatch — visualised. |
 | 💬 | **Smart tooltips** | Underlined terms reveal in-depth explanations (screen-reader friendly). |
 | 🔠 | **Adjustable text size** | `A−` / `A+` (or `+` / `−` keys) scale reading text 80–170%. |
@@ -74,7 +74,7 @@ Switch any time from the palette button — your choice is remembered.
 | 🧛 **Dracula** | Royal aubergine |
 | 🌆 **Synthwave** | Neon retro night |
 | ☀️ **Solarized** | Warm parchment |
-| 📄 **Paper** | Pristine white luxe |
+| 📄 **Paper** | Pristine white |
 
 ---
 

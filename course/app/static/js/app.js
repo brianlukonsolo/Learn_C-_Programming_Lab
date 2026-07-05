@@ -654,7 +654,7 @@
     san.checked = settingsState.sanitize;
     function save() { try { localStorage.setItem("cpp_compiler", JSON.stringify(settingsState)); } catch (e) {} }
     sel.addEventListener("change", function () { settingsState.std = sel.value; save(); toast("Standard: " + sel.options[sel.selectedIndex].text); });
-    san.addEventListener("change", function () { settingsState.sanitize = san.checked; save(); toast(san.checked ? "AddressSanitizer on" : "AddressSanitizer off"); });
+    san.addEventListener("change", function () { settingsState.sanitize = san.checked; save(); toast(san.checked ? "Runtime sanitizers on" : "Runtime sanitizers off"); });
 
     var btn = $("#settingsBtn"), menu = $("#settingsMenu");
     function open() { menu.classList.add("open"); btn.setAttribute("aria-expanded", "true"); }

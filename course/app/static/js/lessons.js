@@ -182,12 +182,12 @@ int main() {
             { h2: "The fundamental types" },
             { ul: [
               "`int` — whole numbers like `-3`, `0`, `42`.",
-              "`double` — real numbers with decimals like `3.14`. (`float` is a smaller, less precise cousin.)",
+              "`double` — floating-point numbers for measurements and calculations with decimals, like `3.14`. (`float` is a smaller, less precise cousin.)",
               "`char` — a single character in single quotes: `'A'`.",
               "`bool` — `true` or `false`.",
-              "`std::string` — text of any length (needs `#include <string>`).",
+              "`std::string` — text managed by the standard library (needs `#include <string>`).",
             ]},
-            { p: "Modifiers tweak size and sign: [[unsigned||`unsigned` means the value can never be negative, which doubles the positive range. `unsigned int` holds 0…~4 billion instead of ±2 billion.]] removes negatives, while [[long / short||These adjust how many bytes the integer uses. `long long` guarantees at least 64 bits for very large numbers; `short` is smaller.]] change the range." },
+            { p: "Modifiers tweak size and sign: [[unsigned||`unsigned` means the value can never be negative. On a common 32-bit `int`, `unsigned int` holds 0…4,294,967,295 instead of roughly -2.1 billion…+2.1 billion. The exact size of `int` is implementation-defined, so use fixed-width types like `std::uint32_t` when the width matters.]] removes negatives, while [[long / short||These adjust the minimum range an integer type must support. `long long` guarantees at least 64 bits for very large numbers; `short` is smaller.]] change the range." },
             { h2: "Let the compiler infer: auto" },
             { p: "`auto` tells the compiler to deduce the type from the initialiser. Handy when the type is obvious or verbose." },
             {
@@ -206,13 +206,13 @@ int main() {
             },
             { h3: "Scope" },
             { p: "A variable lives only inside the [[block||The region between the `{` and `}` where a name is visible. Variables declared inside a block vanish when the block ends — this is called *local scope*.]] where it is declared. Outside that block, the name is unknown." },
-            { tip: "Always initialise your variables. An uninitialised `int` holds an unpredictable \"garbage\" value, a classic source of bugs." },
+            { tip: "Always initialise your variables. Reading an uninitialised local `int` has undefined behaviour, a classic source of bugs." },
             {
               quiz: {
-                q: "Which type best stores a person's exact bank balance like 1052.37?",
+                q: "Which type best stores an approximate measurement like 1052.37?",
                 options: ["int", "char", "double", "bool"],
                 answer: 2,
-                explain: "double holds decimal (floating-point) values. int only stores whole numbers and would drop the cents.",
+                explain: "double stores floating-point values with decimals. For exact money, prefer integer cents or a decimal/fixed-point library instead of binary floating point.",
               },
             },
           ],
@@ -529,8 +529,17 @@ int main() {
             { h2: "void functions" },
             { p: "A function that performs an action but returns nothing uses the [[void||The \"no value\" type. A `void` function does its work — printing, modifying — without producing a result you can store.]] return type." },
             { code:
-`void greet(string name) {
+`#include <iostream>
+#include <string>
+using namespace std;
+
+void greet(const string& name) {
   cout << "Hello, " << name << "!\\n";
+}
+
+int main() {
+  greet("Ada");
+  return 0;
 }`,
               title: "void.cpp" },
             { h2: "Pass by value vs by reference" },
@@ -957,14 +966,14 @@ int main() {
 using namespace std;
 
 int main() {
-  unique_ptr<int> p = make_unique<int>(99);
+  unique_ptr<int> p(new int(99));  // C++11-compatible ownership
   cout << *p << endl;
   // no delete needed — freed automatically when p goes out of scope
   return 0;
 }`,
               title: "smart_ptr.cpp",
             },
-            { tip: "Rule of thumb for modern code: reach for `std::vector` and smart pointers first. Raw `new`/`delete` is rarely needed in everyday programs." },
+            { tip: "Rule of thumb for modern code: reach for `std::vector` and smart pointers first. Raw `new`/`delete` is rarely needed in everyday programs. In C++14 and later, prefer `make_unique<int>(99)` over writing `new` directly." },
             {
               quiz: {
                 q: "Which statement correctly frees memory allocated with new int[10]?",
@@ -1497,8 +1506,8 @@ int main() {
             },
             { h2: "The named casts" },
             { ul: [
-              "[[static_cast||The everyday cast for related types: numbers, and up/down a known class hierarchy. Checked at compile time.]] `static_cast<T>(v)` — ordinary, compile-time conversions.",
-              "[[dynamic_cast||Safely converts pointers/references within a polymorphic class hierarchy, checking at runtime. Returns nullptr (or throws) if the conversion isn't valid.]] `dynamic_cast<T>(v)` — safe downcasts in class hierarchies.",
+              "[[static_cast||The everyday cast for related types such as numeric conversions. It is checked at compile time, but it does not perform a runtime safety check for downcasts in a class hierarchy.]] `static_cast<T>(v)` — ordinary, compile-time conversions.",
+              "[[dynamic_cast||Safely converts pointers/references within a polymorphic class hierarchy, checking at runtime. For pointers it returns `nullptr` if the conversion is not valid; for references it throws `std::bad_cast`.]] `dynamic_cast<T>(v)` — runtime-checked downcasts in class hierarchies.",
               "`const_cast` — adds or removes `const` (use rarely).",
               "`reinterpret_cast` — low-level bit reinterpretation (dangerous).",
             ]},
