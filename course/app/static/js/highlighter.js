@@ -1,4 +1,4 @@
-/* Lightweight, dependency-free C++ syntax highlighter.
+/* Lightweight, dependency-free C/C++ syntax highlighter.
    Tokenises a source string and returns safe HTML with classed spans. */
 (function () {
   "use strict";
@@ -13,7 +13,9 @@
     "public","register","reinterpret_cast","requires","return","sizeof","static",
     "static_assert","static_cast","struct","switch","template","this","thread_local",
     "throw","try","typedef","typeid","typename","union","using","virtual","volatile",
-    "while","xor","xor_eq","final","override"
+    "while","xor","xor_eq","final","override",
+    "_Alignas","_Alignof","_Atomic","_Bool","_Complex","_Generic","_Imaginary",
+    "_Noreturn","_Static_assert","_Thread_local","restrict"
   ]);
 
   var TYPES = new Set([
@@ -21,7 +23,8 @@
     "wchar_t","char8_t","char16_t","char32_t","size_t","string","wstring","nullptr_t",
     "vector","map","unordered_map","set","unordered_set","pair","array","list","deque",
     "stack","queue","tuple","ostream","istream","ofstream","ifstream","fstream",
-    "stringstream","exception","runtime_error","initializer_list","optional","variant"
+    "stringstream","exception","runtime_error","initializer_list","optional","variant",
+    "FILE","fpos_t","ptrdiff_t","va_list"
   ]);
 
   var LITERALS = new Set(["true","false","nullptr","NULL","cout","cin","cerr","endl","std"]);

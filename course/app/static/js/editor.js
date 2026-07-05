@@ -23,6 +23,14 @@
     ta.style.height = Math.max(120, ta.scrollHeight) + "px";
   }
 
+  function runtime() {
+    var s = window.CppSettings && window.CppSettings.get ? window.CppSettings.get() : {};
+    return {
+      compiler: s.compiler || (s.language === "c" ? "gcc" : "g++"),
+      languageName: s.languageName || (s.language === "c" ? "C" : "C++"),
+    };
+  }
+
   /* Build a full runnable code card. opts: { code, title, stdin } */
   function createRunnable(opts) {
     opts = opts || {};
@@ -47,7 +55,7 @@
     ta.autocapitalize = "off";
     ta.setAttribute("autocomplete", "off");
     ta.setAttribute("autocorrect", "off");
-    ta.setAttribute("aria-label", "C++ code editor");
+    ta.setAttribute("aria-label", runtime().languageName + " code editor");
     var initial = (opts.code || "").replace(/\s+$/, "");
     ta.value = initial;
     wrap.appendChild(hl);
@@ -114,7 +122,7 @@
       runBtn.disabled = true;
       runBtn.innerHTML = '<span class="spinner"></span> Running';
       cBody.className = "console-body";
-      cBody.innerHTML = '<span style="color:var(--text-faint)">Compiling with g++…</span>';
+      cBody.innerHTML = '<span style="color:var(--text-faint)">Compiling with ' + runtime().compiler + '…</span>';
       stat.className = "stat";
       stat.textContent = "";
       try {
@@ -246,7 +254,7 @@
     var ta = el("textarea");
     ta.spellcheck = false; ta.autocapitalize = "off";
     ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocorrect", "off");
-    ta.setAttribute("aria-label", "Exercise code editor");
+    ta.setAttribute("aria-label", runtime().languageName + " exercise code editor");
     var initial = (opts.code || "").replace(/\s+$/, "");
     ta.value = initial;
     wrap.appendChild(hl); wrap.appendChild(ta);

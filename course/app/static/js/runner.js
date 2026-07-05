@@ -5,7 +5,7 @@
 
   function opts() {
     var s = window.CppSettings && window.CppSettings.get ? window.CppSettings.get() : {};
-    return { std: s.std || "c++17", sanitize: !!s.sanitize };
+    return { language: s.language || "cpp", std: s.std || "c++17", sanitize: !!s.sanitize };
   }
 
   async function post(url, body) {
@@ -24,12 +24,12 @@
 
   function run(code, stdin) {
     var o = opts();
-    return post("api/run", { code: code, stdin: stdin || "", std: o.std, sanitize: o.sanitize });
+    return post("api/run", { code: code, stdin: stdin || "", language: o.language, std: o.std, sanitize: o.sanitize });
   }
 
   function grade(code, tests) {
     var o = opts();
-    return post("api/grade", { code: code, tests: tests, std: o.std, sanitize: o.sanitize });
+    return post("api/grade", { code: code, tests: tests, language: o.language, std: o.std, sanitize: o.sanitize });
   }
 
   window.CppRunner = { run: run, grade: grade };

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>C++ Academy — Learn C++ in a Day</title>
-  <meta name="description" content="An interactive, themeable C++ course with a live in-browser compiler." />
+  <title>C/C++ Academy — Interactive Systems Programming</title>
+  <meta name="description" content="Interactive, themeable C and C++ courses with a live in-browser compiler." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -25,12 +25,17 @@
       <span></span><span></span><span></span>
     </button>
     <div class="brand">
-      <span class="brand-mark">C<sup>++</sup></span>
+      <span class="brand-mark" id="brandMark">C<sup>++</sup></span>
       <div class="brand-text">
-        <strong>C++ Academy</strong>
-        <small>Learn C++ in a day</small>
+        <strong id="brandTitle">C++ Academy</strong>
+        <small id="brandSubtitle">Learn C++ in a day</small>
       </div>
     </div>
+
+    <label class="course-switcher" for="courseSelect">
+      <span class="visually-hidden">Course</span>
+      <select id="courseSelect" aria-label="Choose course"></select>
+    </label>
 
     <div class="topbar-progress" title="Course progress">
       <div class="ring" id="progressRing">
@@ -54,7 +59,7 @@
       </button>
       <div class="settings-menu" id="settingsMenu" role="menu">
         <div class="settings-row">
-          <label for="stdSelect">C++ standard</label>
+          <label for="stdSelect" id="stdLabel">C++ standard</label>
           <select id="stdSelect" class="settings-select">
             <option value="c++11">C++11</option>
             <option value="c++14">C++14</option>
@@ -138,6 +143,7 @@
 
   <script src="js/highlighter.js"></script>
   <script src="js/lessons.js"></script>
+  <script src="js/c_lessons.js"></script>
   <script src="js/runner.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/app.js"></script>

@@ -5,7 +5,7 @@ Dependency-free (Python standard library only) so the image builds reliably
 and stays tiny. Responsibilities:
 
   * Serve the static single-page frontend from ./static
-  * POST /api/run   -> compile + execute a C++ snippet with g++, return output
+  * POST /api/run   -> compile + execute a C/C++ snippet, return output
   * GET  /api/health -> liveness probe for the container healthcheck
 
 Everything runs inside the container as the unprivileged `student` user, with
@@ -37,12 +37,16 @@ RUN_TIMEOUT = int(os.environ.get("RUN_TIMEOUT", "6"))
 MAX_CODE_BYTES = int(os.environ.get("MAX_CODE_BYTES", "200000"))
 # How many compile/run jobs may execute at once (protects host CPU).
 MAX_CONCURRENCY = int(os.environ.get("MAX_CONCURRENCY", "4"))
-# Allowed C++ standards (feature #7). Maps request value -> g++ flag.
-STD_ALLOW = {
+CPP_STD_ALLOW = {
     "c++11": "c++11", "c++14": "c++14", "c++17": "c++17",
     "c++20": "c++20", "c++23": "c++23",
 }
-DEFAULT_STD = "c++17"
+C_STD_ALLOW = {
+    "c90": "c90", "c99": "c99", "c11": "c11",
+    "c17": "c17", "c23": "c23",
+}
+DEFAULT_CPP_STD = "c++17"
+DEFAULT_C_STD = "c11"
 
 # Bounded run slots + a small LRU result cache for /api/run (feature #12).
 _run_slots = threading.BoundedSemaphore(MAX_CONCURRENCY)
@@ -79,7 +83,7 @@ CONTENT_TYPES = {
 }
 
 
-def _child_limits():
+def _child_limits(sanitize=False):
     """preexec_fn applied to the compiled program: cap CPU, memory, files."""
     if resource is None:
         return
@@ -87,12 +91,15 @@ def _child_limits():
     # the wall-clock timeout normally fires first (giving a clean timed_out),
     # and this still hard-stops anything that slips past it.
     resource.setrlimit(resource.RLIMIT_CPU, (RUN_TIMEOUT + 2, RUN_TIMEOUT + 3))
-    # Address space ~ 256 MB.
-    mem = 256 * 1024 * 1024
-    try:
-        resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
-    except (ValueError, OSError):
-        pass
+    # Address space ~ 256 MB. AddressSanitizer reserves a large shadow-memory
+    # range, so RLIMIT_AS prevents sanitized programs from starting. The
+    # container memory limit still caps real memory use when sanitizers are on.
+    if not sanitize:
+        mem = 256 * 1024 * 1024
+        try:
+            resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
+        except (ValueError, OSError):
+            pass
     # Max output file size ~ 16 MB (blocks runaway file writes).
     fsize = 16 * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_FSIZE, (fsize, fsize))
@@ -117,18 +124,24 @@ _SIGNAL_NOTES = {
 }
 
 
-def _resolve_options(std, sanitize):
-    flag = STD_ALLOW.get((std or "").lower(), STD_ALLOW[DEFAULT_STD])
-    return flag, bool(sanitize)
+def _resolve_options(language, std, sanitize):
+    lang = "c" if (language or "").lower() == "c" else "cpp"
+    if lang == "c":
+        flag = C_STD_ALLOW.get((std or "").lower(), C_STD_ALLOW[DEFAULT_C_STD])
+        compiler = "gcc"
+    else:
+        flag = CPP_STD_ALLOW.get((std or "").lower(), CPP_STD_ALLOW[DEFAULT_CPP_STD])
+        compiler = "g++"
+    return lang, compiler, flag, bool(sanitize)
 
 
-def _compile(code, std_flag, sanitize, workdir):
+def _compile(code, language, compiler, std_flag, sanitize, workdir):
     """Compile to `workdir/program`. Returns (ok, output, binpath, timed_out)."""
-    src = os.path.join(workdir, "main.cpp")
+    src = os.path.join(workdir, "main.c" if language == "c" else "main.cpp")
     binpath = os.path.join(workdir, "program")
     with open(src, "w", encoding="utf-8") as fh:
         fh.write(code)
-    cmd = ["g++", "-std=" + std_flag, "-O1", "-pipe", "-Wall", "-Wextra"]
+    cmd = [compiler, "-std=" + std_flag, "-O1", "-pipe", "-Wall", "-Wextra"]
     if sanitize:
         # AddressSanitizer + UndefinedBehaviorSanitizer catch memory/UB bugs.
         cmd += ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g"]
@@ -151,7 +164,8 @@ def _run(binpath, stdin_text, workdir, sanitize=False):
         proc = subprocess.run(
             [binpath], input=stdin_text, capture_output=True, text=True,
             timeout=RUN_TIMEOUT, cwd=workdir,
-            preexec_fn=_child_limits if resource else None, env=env,
+            preexec_fn=(lambda: _child_limits(sanitize)) if resource else None,
+            env=env,
         )
         res["stdout"] = _truncate(proc.stdout)
         res["stderr"] = _truncate(proc.stderr)
@@ -172,11 +186,11 @@ def _run(binpath, stdin_text, workdir, sanitize=False):
     return res
 
 
-def compile_and_run(code, stdin_text, std=DEFAULT_STD, sanitize=False):
+def compile_and_run(code, stdin_text, language="cpp", std=None, sanitize=False):
     """Compile + run once. Cached and concurrency-limited (features #7, #12)."""
-    std_flag, sanitize = _resolve_options(std, sanitize)
+    language, compiler, std_flag, sanitize = _resolve_options(language, std, sanitize)
     key = hashlib.sha256(
-        ("\x00".join([std_flag, "1" if sanitize else "0", stdin_text, code]))
+        ("\x00".join([language, std_flag, "1" if sanitize else "0", stdin_text, code]))
         .encode("utf-8")).hexdigest()
     cached = _cache_get(key)
     if cached is not None:
@@ -185,12 +199,14 @@ def compile_and_run(code, stdin_text, std=DEFAULT_STD, sanitize=False):
 
     result = {"stage": "compile", "compile_ok": False, "compile_output": "",
               "stdout": "", "stderr": "", "exit_code": None,
-              "timed_out": False, "cached": False, "std": std, "sanitize": sanitize}
+              "timed_out": False, "cached": False, "language": language,
+              "std": std_flag, "sanitize": sanitize}
 
     with _run_slots:
         workdir = tempfile.mkdtemp(prefix="run_", dir="/tmp/cppwork")
         try:
-            ok, output, binpath, ctimeout = _compile(code, std_flag, sanitize, workdir)
+            ok, output, binpath, ctimeout = _compile(
+                code, language, compiler, std_flag, sanitize, workdir)
             result["compile_output"] = output
             result["timed_out"] = ctimeout
             if not ok:
@@ -207,16 +223,17 @@ def compile_and_run(code, stdin_text, std=DEFAULT_STD, sanitize=False):
     return result
 
 
-def grade(code, tests, std=DEFAULT_STD, sanitize=False):
+def grade(code, tests, language="cpp", std=None, sanitize=False):
     """Compile once, run against each hidden test case (feature #2)."""
-    std_flag, sanitize = _resolve_options(std, sanitize)
+    language, compiler, std_flag, sanitize = _resolve_options(language, std, sanitize)
     out = {"compile_ok": False, "compile_output": "", "passed": 0,
-           "total": len(tests), "tests": [], "std": std}
+           "total": len(tests), "tests": [], "language": language, "std": std_flag}
 
     with _run_slots:
         workdir = tempfile.mkdtemp(prefix="grade_", dir="/tmp/cppwork")
         try:
-            ok, output, binpath, _ct = _compile(code, std_flag, sanitize, workdir)
+            ok, output, binpath, _ct = _compile(
+                code, language, compiler, std_flag, sanitize, workdir)
             out["compile_output"] = output
             if not ok:
                 return out
@@ -296,7 +313,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             payload = json.loads(raw.decode("utf-8"))
             code = payload.get("code", "")
-            std = payload.get("std", DEFAULT_STD)
+            language = str(payload.get("language", "cpp")).lower()
+            std = payload.get("std", DEFAULT_C_STD if language == "c" else DEFAULT_CPP_STD)
             sanitize = bool(payload.get("sanitize", False))
         except (ValueError, AttributeError):
             self._send(400, json.dumps({"error": "Invalid JSON body."}))
@@ -314,11 +332,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(400, json.dumps({"error": "No test cases provided."}))
                 return
             tests = tests[:25]  # cap work per request
-            self._send(200, json.dumps(grade(code, tests, std, sanitize)))
+            self._send(200, json.dumps(grade(code, tests, language, std, sanitize)))
             return
 
         stdin_text = payload.get("stdin", "") or ""
-        result = compile_and_run(code, stdin_text, std, sanitize)
+        result = compile_and_run(code, stdin_text, language, std, sanitize)
         self._send(200, json.dumps(result))
 
     # -- static files ------------------------------------------------------
@@ -359,7 +377,7 @@ def main():
     os.makedirs("/tmp/cppwork", exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     server.daemon_threads = True
-    print(f"C++ Academy listening on http://0.0.0.0:{PORT}")
+    print(f"C/C++ Academy listening on http://0.0.0.0:{PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

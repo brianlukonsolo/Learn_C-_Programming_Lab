@@ -77,30 +77,153 @@
         '<defs/></svg>',
   };
 
-  // ---------- State ----------
-  var MODULES = window.CourseData;
+  // ---------- Courses / state ----------
+  var COURSES = [
+    {
+      id: "cpp",
+      language: "cpp",
+      title: "C++ Academy",
+      subtitle: "Learn C++ in a day",
+      shortName: "C++",
+      mark: "C<sup>++</sup>",
+      modules: window.CourseData || [],
+      homeId: "home",
+      startId: "structure",
+      doneKey: "cpp_done",
+      compilerKey: "cpp_compiler",
+      compiler: "g++",
+      standardLabel: "C++ standard",
+      defaultStd: "c++17",
+      standards: [
+        ["c++11", "C++11"],
+        ["c++14", "C++14"],
+        ["c++17", "C++17"],
+        ["c++20", "C++20"],
+        ["c++23", "C++23"],
+      ],
+      heroTitle: "Learn C++ in a Day",
+      heroEyebrow: "Interactive · Live compiler",
+      heroLede: "A hands-on course built from the classic C++ Language Tutorial. Read clear lessons, hover any underlined term for a deeper explanation, and run real C++ right in your browser.",
+      completeToast: "🎉 Course complete — you learned C++!",
+      features: [
+        ["⚡", "Live compiler", "Every example runs through real g++ in a sandboxed container."],
+        ["🎨", "Six themes", "Midnight, Nord, Dracula, Synthwave, Solarized, Paper — pick your mood."],
+        ["💬", "Smart tooltips", "Underlined terms reveal in-depth explanations on hover."],
+        ["📈", "Progress tracking", "Your completed lessons are saved automatically as you go."],
+      ],
+    },
+    {
+      id: "c",
+      language: "c",
+      title: "C Academy",
+      subtitle: "Learn ANSI C",
+      shortName: "C",
+      mark: "C",
+      modules: window.CCourseData || [],
+      homeId: "c-home",
+      startId: "c-structure",
+      doneKey: "c_done",
+      compilerKey: "c_compiler",
+      compiler: "gcc",
+      standardLabel: "C standard",
+      defaultStd: "c11",
+      standards: [
+        ["c90", "C90 / ANSI C"],
+        ["c99", "C99"],
+        ["c11", "C11"],
+        ["c17", "C17"],
+        ["c23", "C23"],
+      ],
+      heroTitle: "Learn C",
+      heroEyebrow: "K&R roadmap · Live compiler",
+      heroLede: "A practical C course inspired by The C Programming Language, 2nd Edition. Work through types, control flow, pointers, arrays, structures, the standard library, and Unix-style I/O with runnable examples.",
+      completeToast: "🎉 Course complete — you learned C!",
+      features: [
+        ["⚡", "Live gcc", "Every C example compiles with gcc inside the sandboxed container."],
+        ["🧭", "K&R roadmap", "The course follows the book's arc while using original lesson text and exercises."],
+        ["🧪", "Auto-graded C", "Exercises test functions, arrays, pointers, structs, and file-style input."],
+        ["📈", "Separate progress", "C and C++ progress are tracked independently."],
+      ],
+    },
+  ];
+  var COURSE_MAP = {};
+  var LESSON_COURSE = {};
+  var MODULES = [];
   var LESSONS = [];      // flat list { ...lesson, module, modIndex }
   var INDEX = {};        // id -> position in LESSONS
   var TIPS = [];         // tooltip HTML store, reset per render
-  var done = loadDone();
+  var course = null;
+  var done = new Set();
   var current = null;
 
-  MODULES.forEach(function (mod, mi) {
-    mod.lessons.forEach(function (les) {
-      les._mod = mod.title;
-      les._mi = mi;
-      INDEX[les.id] = LESSONS.length;
-      LESSONS.push(les);
+  COURSES.forEach(function (c) {
+    COURSE_MAP[c.id] = c;
+    c.modules.forEach(function (mod) {
+      mod.lessons.forEach(function (les) {
+        LESSON_COURSE[les.id] = c;
+      });
     });
   });
+  activateCourse(initialCourseId());
+
+  function initialCourseId() {
+    var hash = location.hash.replace("#", "");
+    if (hash && LESSON_COURSE[hash]) return LESSON_COURSE[hash].id;
+    try {
+      var saved = localStorage.getItem("academy_course");
+      if (saved && COURSE_MAP[saved]) return saved;
+    } catch (e) {}
+    return "cpp";
+  }
+
+  function activateCourse(id) {
+    course = COURSE_MAP[id] || COURSE_MAP.cpp || COURSES[0];
+    MODULES = course.modules || [];
+    LESSONS = [];
+    INDEX = {};
+    MODULES.forEach(function (mod, mi) {
+      mod.lessons.forEach(function (les) {
+        les._mod = mod.title;
+        les._mi = mi;
+        INDEX[les.id] = LESSONS.length;
+        LESSONS.push(les);
+      });
+    });
+    done = loadDone();
+    try { localStorage.setItem("academy_course", course.id); } catch (e) {}
+  }
+
+  function applyCourseChrome() {
+    var select = $("#courseSelect");
+    if (select) select.value = course.id;
+    var mark = $("#brandMark");
+    if (mark) mark.innerHTML = course.mark;
+    var title = $("#brandTitle");
+    if (title) title.textContent = course.title;
+    var subtitle = $("#brandSubtitle");
+    if (subtitle) subtitle.textContent = course.subtitle;
+    document.title = course.title + " — Interactive Systems Programming";
+    var desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute("content", course.heroLede);
+  }
+
+  function changeCourse(id) {
+    if (!COURSE_MAP[id] || id === course.id) return;
+    activateCourse(id);
+    applyCourseChrome();
+    syncSettingsUI();
+    buildNav();
+    updateProgress();
+    go(course.homeId);
+  }
 
   // ---------- Storage helpers ----------
   function loadDone() {
-    try { return new Set(JSON.parse(localStorage.getItem("cpp_done") || "[]")); }
+    try { return new Set(JSON.parse(localStorage.getItem(course.doneKey) || "[]")); }
     catch (e) { return new Set(); }
   }
   function saveDone() {
-    try { localStorage.setItem("cpp_done", JSON.stringify(Array.from(done))); } catch (e) {}
+    try { localStorage.setItem(course.doneKey, JSON.stringify(Array.from(done))); } catch (e) {}
   }
 
   // ---------- DOM helpers ----------
@@ -184,6 +307,21 @@
   function applyTheme(id) {
     document.documentElement.setAttribute("data-theme", id);
     try { localStorage.setItem("cpp_theme", id); } catch (e) {}
+  }
+
+  function initCourseSwitcher() {
+    var sel = $("#courseSelect");
+    if (!sel) return;
+    sel.innerHTML = "";
+    COURSES.forEach(function (c) {
+      if (!c.modules || !c.modules.length) return;
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.shortName + " course";
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () { changeCourse(sel.value); });
+    applyCourseChrome();
   }
 
   // ============================================================
@@ -330,27 +468,21 @@
   function renderHero() {
     var wrap = el("div", "hero");
     wrap.innerHTML =
-      '<span class="eyebrow">Interactive · Live compiler</span>' +
-      "<h1>Learn C++ in a Day</h1>" +
-      '<p class="lede">A hands-on course built from the classic C++ Language Tutorial. ' +
-      "Read clear lessons, hover any underlined term for a deeper explanation, and run real C++ right in your browser.</p>" +
+      '<span class="eyebrow">' + escapeHtml(course.heroEyebrow) + "</span>" +
+      "<h1>" + escapeHtml(course.heroTitle) + "</h1>" +
+      '<p class="lede">' + escapeHtml(course.heroLede) + "</p>" +
       '<button class="start-btn" id="startBtn">Start learning →</button>';
 
     var grid = el("div", "feature-grid");
-    [
-      ["⚡", "Live compiler", "Every example runs through real g++ in a sandboxed container."],
-      ["🎨", "Six themes", "Midnight, Nord, Dracula, Synthwave, Solarized, Paper — pick your mood."],
-      ["💬", "Smart tooltips", "Underlined terms reveal in-depth explanations on hover."],
-      ["📈", "Progress tracking", "Your completed lessons are saved automatically as you go."],
-    ].forEach(function (f) {
+    course.features.forEach(function (f) {
       grid.appendChild(el("div", "feature",
-        '<div class="fico">' + f[0] + "</div><h3>" + f[1] + "</h3><p>" + f[2] + "</p>"));
+        '<div class="fico">' + f[0] + "</div><h3>" + escapeHtml(f[1]) + "</h3><p>" + escapeHtml(f[2]) + "</p>"));
     });
     wrap.appendChild(grid);
 
     setTimeout(function () {
       var sb = $("#startBtn");
-      if (sb) sb.addEventListener("click", function () { go("structure"); });
+      if (sb) sb.addEventListener("click", function () { go(course.startId); });
     }, 0);
     return wrap;
   }
@@ -360,7 +492,7 @@
     wrap.appendChild(el("h2", null, "Your roadmap"));
     var list = el("div", "road-list");
     MODULES.forEach(function (mod, mi) {
-      var realLessons = mod.lessons.filter(function (l) { return l.id !== "home"; });
+      var realLessons = mod.lessons.filter(function (l) { return l.id !== course.homeId && !l.home; });
       if (!realLessons.length) return;
       var first = realLessons[0];
       var item = el("div", "road-item");
@@ -460,13 +592,13 @@
   var CIRC = 2 * Math.PI * 19;
   function updateProgress() {
     // count only real lessons (exclude the welcome page)
-    var total = LESSONS.length - 1;
+    var total = LESSONS.filter(function (l) { return l.id !== course.homeId && !l.home; }).length;
     var completed = 0;
-    LESSONS.forEach(function (l) { if (l.id !== "home" && done.has(l.id)) completed++; });
+    LESSONS.forEach(function (l) { if (l.id !== course.homeId && !l.home && done.has(l.id)) completed++; });
     var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     $("#progressPct").textContent = pct + "%";
     $("#ringFill").style.strokeDashoffset = CIRC * (1 - pct / 100);
-    if (pct === 100) { burst(0.5, 0.3, 120); toast("🎉 Course complete — you learned C++!"); }
+    if (pct === 100) { burst(0.5, 0.3, 120); toast(course.completeToast); }
   }
 
   // ============================================================
@@ -483,7 +615,7 @@
     nextBtn.disabled = !next;
     $("#nextTitle").textContent = next ? (next.nav || next.title) : "Finish";
 
-    if (current === "home") {
+    if (current === course.homeId || (LESSONS[pos] && LESSONS[pos].home)) {
       completeBtn.style.display = "none";
     } else {
       completeBtn.style.display = "";
@@ -496,7 +628,7 @@
   }
 
   function markComplete() {
-    if (current === "home") return;
+    if (current === course.homeId || (LESSONS[INDEX[current]] && LESSONS[INDEX[current]].home)) return;
     var wasDone = done.has(current);
     done.add(current);
     saveDone();
@@ -513,7 +645,15 @@
   //  Navigation
   // ============================================================
   function go(id) {
-    if (!(id in INDEX)) id = "home";
+    var targetCourse = LESSON_COURSE[id];
+    if (targetCourse && targetCourse.id !== course.id) {
+      activateCourse(targetCourse.id);
+      applyCourseChrome();
+      syncSettingsUI();
+      buildNav();
+      updateProgress();
+    }
+    if (!(id in INDEX)) id = course.homeId;
     current = id;
     if (location.hash !== "#" + id) {
       history.pushState(null, "", "#" + id);
@@ -639,22 +779,77 @@
   // ============================================================
   //  Compiler settings (features #7) + celebrate hook (#2)
   // ============================================================
-  var settingsState = { std: "c++17", sanitize: false };
-  window.CppSettings = { get: function () { return settingsState; } };
+  var settingsByCourse = {};
+  window.CppSettings = { get: getRuntimeSettings };
   window.CppCelebrate = function () { burst(0.5, 0.4, 90); toast("✓ All tests passed — great work!"); };
 
+  function defaultSettings(c) {
+    return { std: c.defaultStd, sanitize: false };
+  }
+
+  function getCourseSettings(c) {
+    c = c || course;
+    if (!settingsByCourse[c.id]) {
+      var st = defaultSettings(c);
+      try {
+        var saved = JSON.parse(localStorage.getItem(c.compilerKey) || "{}");
+        if (saved.std) st.std = saved.std;
+        if (typeof saved.sanitize === "boolean") st.sanitize = saved.sanitize;
+      } catch (e) {}
+      settingsByCourse[c.id] = st;
+    }
+    return settingsByCourse[c.id];
+  }
+
+  function getRuntimeSettings() {
+    var st = getCourseSettings(course);
+    return {
+      language: course.language,
+      std: st.std,
+      sanitize: !!st.sanitize,
+      compiler: course.compiler,
+      languageName: course.shortName,
+    };
+  }
+
+  function saveCourseSettings() {
+    try { localStorage.setItem(course.compilerKey, JSON.stringify(getCourseSettings(course))); } catch (e) {}
+  }
+
+  function syncSettingsUI() {
+    var sel = $("#stdSelect"), san = $("#sanitizeToggle"), label = $("#stdLabel");
+    if (!sel || !san) return;
+    var st = getCourseSettings(course);
+    sel.innerHTML = "";
+    course.standards.forEach(function (s) {
+      var opt = document.createElement("option");
+      opt.value = s[0];
+      opt.textContent = s[1];
+      sel.appendChild(opt);
+    });
+    if (label) label.textContent = course.standardLabel;
+    sel.value = st.std;
+    if (sel.value !== st.std) {
+      st.std = course.defaultStd;
+      sel.value = st.std;
+      saveCourseSettings();
+    }
+    san.checked = !!st.sanitize;
+  }
+
   function initSettings() {
-    try {
-      var saved = JSON.parse(localStorage.getItem("cpp_compiler") || "{}");
-      if (saved.std) settingsState.std = saved.std;
-      if (typeof saved.sanitize === "boolean") settingsState.sanitize = saved.sanitize;
-    } catch (e) {}
     var sel = $("#stdSelect"), san = $("#sanitizeToggle");
-    sel.value = settingsState.std;
-    san.checked = settingsState.sanitize;
-    function save() { try { localStorage.setItem("cpp_compiler", JSON.stringify(settingsState)); } catch (e) {} }
-    sel.addEventListener("change", function () { settingsState.std = sel.value; save(); toast("Standard: " + sel.options[sel.selectedIndex].text); });
-    san.addEventListener("change", function () { settingsState.sanitize = san.checked; save(); toast(san.checked ? "Runtime sanitizers on" : "Runtime sanitizers off"); });
+    syncSettingsUI();
+    sel.addEventListener("change", function () {
+      getCourseSettings(course).std = sel.value;
+      saveCourseSettings();
+      toast("Standard: " + sel.options[sel.selectedIndex].text);
+    });
+    san.addEventListener("change", function () {
+      getCourseSettings(course).sanitize = san.checked;
+      saveCourseSettings();
+      toast(san.checked ? "Runtime sanitizers on" : "Runtime sanitizers off");
+    });
 
     var btn = $("#settingsBtn"), menu = $("#settingsMenu");
     function open() { menu.classList.add("open"); btn.setAttribute("aria-expanded", "true"); }
@@ -712,6 +907,7 @@
   // ============================================================
   function boot() {
     initThemes();
+    initCourseSwitcher();
     initFontSize();
     initSettings();
     initShortcuts();
@@ -735,16 +931,13 @@
     });
 
     window.addEventListener("popstate", function () {
-      var id = location.hash.replace("#", "") || "home";
-      current = id in INDEX ? id : "home";
-      renderLesson(LESSONS[INDEX[current]]);
-      refreshNavState();
-      updatePager();
+      var id = location.hash.replace("#", "") || course.homeId;
+      go(id);
     });
     window.addEventListener("scroll", hideTip, { passive: true });
 
     var start = location.hash.replace("#", "");
-    go(start in INDEX ? start : "home");
+    go(start || course.homeId);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
